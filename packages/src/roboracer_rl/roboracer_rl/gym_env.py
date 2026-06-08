@@ -145,13 +145,41 @@ class RoboRacerEnv(gym.Env if gym is not None else object):
 
     def _speed(self) -> float:
         twist = self.latest_odom.twist.twist
-        return math.hypot(twist.linear.x, twist.linear.y)
+
+        vel = np.array(
+            [twist.linear.x, twist.linear.y],
+            dtype=np.float32
+        )
+
+        vel = np.nan_to_num(
+            vel,
+            nan=0.0,
+            posinf=0.0,
+            neginf=0.0,
+        )
+
+        speed = float(np.linalg.norm(vel))
+
+        if not np.isfinite(speed):
+            return 0.0
+
+        return speed
 
     def _observation(self) -> np.ndarray:
         lidar = self._sectorize_scan()
         speed = np.clip(self._speed() / 10.0, 0.0, 1.0)
         steering = np.clip((self.last_action + 0.6) / 1.2, 0.0, 1.0)
-        return np.concatenate([lidar, [speed, steering]]).astype(np.float32)
+
+        obs = np.concatenate([lidar, [speed, steering]]).astype(np.float32)
+
+        obs = np.nan_to_num(
+            obs,
+            nan=0.0,
+            posinf=1.0,
+            neginf=0.0,
+        )
+
+        return np.clip(obs, 0.0, 1.0).astype(np.float32)
 
     def _min_lidar(self) -> float:
         ranges = np.asarray(self.latest_scan.ranges, dtype=np.float32)
