@@ -1,3 +1,9 @@
+# SPDX-License-Identifier: MIT
+# Authors: Sai Tarun Bhyri, Thorsten Berger
+# Copyright (c) 2026 AVAI Team, Chair of Software Engineering, Ruhr University Bochum
+#
+# Part of the rrstack RoboRacer reinforcement learning package.
+
 import math
 import time
 from typing import Optional, Tuple
