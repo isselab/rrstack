@@ -23,3 +23,6 @@ packages/src/TMP_RECORDING.mp4
 packages/src/roboracer_rl/roboracer_rl/racing_gym_env.py
 packages/src/roboracer_rl/roboracer_rl/racing_policy_node.py
 packages/src/roboracer_rl/roboracer_rl/train_racing.py
+
+# Local Python virtual environments
+packages/rr_rl/

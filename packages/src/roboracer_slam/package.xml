@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>roboracer_slam</name>
+  <version>0.0.1</version>
+  <description>SLAM integration for rrstack using LiDAR, odometry, TF, slam_toolbox, Gazebo, and RViz.</description>
+
+  <maintainer email="">AVAI Team</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>slam_toolbox</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+  <exec_depend>roboracer_gazebo</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
