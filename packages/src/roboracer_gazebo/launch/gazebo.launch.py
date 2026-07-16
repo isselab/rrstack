@@ -88,6 +88,7 @@ def generate_launch_description():
             '-y', LaunchConfiguration('y'),
             '-z', LaunchConfiguration('z'),
             '-Y', LaunchConfiguration('yaw'),
+            '-timeout', '120',
         ]
     )
 

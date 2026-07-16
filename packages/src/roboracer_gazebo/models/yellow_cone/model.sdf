@@ -1,0 +1,33 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <model name="yellow_cone">
+    <static>true</static>
+
+    <link name="cone_link">
+
+      <visual name="visual">
+        <geometry>
+          <mesh>
+            <uri>model://yellow_cone/meshes/cone_mesh.dae</uri>
+            <scale>0.65 0.65 0.65</scale>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>1 1 0 1</ambient>
+          <diffuse>1 1 0 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+        </material>
+      </visual>
+
+      <collision name="collision">
+        <geometry>
+          <mesh>
+            <uri>model://yellow_cone/meshes/cone_mesh.dae</uri>
+            <scale>0.65 0.65 0.65</scale>
+          </mesh>
+        </geometry>
+      </collision>
+
+    </link>
+  </model>
+</sdf>

@@ -19,7 +19,7 @@ setup(
     install_requires=["setuptools"],
     zip_safe=True,
     maintainer="AVAI Team",
-    maintainer_email="",
+    maintainer_email="avai@example.com",
     description="SLAM integration for rrstack using LiDAR, odometry, TF, slam_toolbox, Gazebo, and RViz.",
     license="MIT",
     entry_points={

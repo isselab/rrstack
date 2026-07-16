@@ -48,7 +48,7 @@ Third-party assets remain subject to their original license terms.
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file:///home/tarunbhyri9/project_repo/roboracer_state_estimation/packages/src/roboracer_gazebo/models/f110_car/meshes/car.dae"/>
+        <mesh filename="file:///home/dhanush/rrstack/packages/src/roboracer_gazebo/models/f110_car/meshes/car.dae"/>
       </geometry>
     </visual>
   </link>
@@ -134,7 +134,7 @@ Third-party assets remain subject to their original license terms.
     <visual>
       <origin xyz="0 0.02 0" rpy="0 0 3.14159"/>
       <geometry>
-        <mesh filename="file:///home/tarunbhyri9/project_repo/roboracer_state_estimation/packages/src/roboracer_gazebo/models/f110_car/meshes/wheel.dae"/>
+        <mesh filename="file:///home/dhanush/rrstack/packages/src/roboracer_gazebo/models/f110_car/meshes/wheel.dae"/>
       </geometry>
     </visual>
   </link>
@@ -191,7 +191,7 @@ Third-party assets remain subject to their original license terms.
     <visual>
       <origin xyz="0 -0.02 0" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file:///home/tarunbhyri9/project_repo/roboracer_state_estimation/packages/src/roboracer_gazebo/models/f110_car/meshes/wheel.dae"/>
+        <mesh filename="file:///home/dhanush/rrstack/packages/src/roboracer_gazebo/models/f110_car/meshes/wheel.dae"/>
       </geometry>
     </visual>
   </link>
@@ -224,7 +224,7 @@ Third-party assets remain subject to their original license terms.
     <visual>
       <origin xyz="0 0.021 0" rpy="0 0 3.14159"/>
       <geometry>
-        <mesh filename="file:///home/tarunbhyri9/project_repo/roboracer_state_estimation/packages/src/roboracer_gazebo/models/f110_car/meshes/wheel.dae"/>
+        <mesh filename="file:///home/dhanush/rrstack/packages/src/roboracer_gazebo/models/f110_car/meshes/wheel.dae"/>
       </geometry>
     </visual>
   </link>
@@ -257,7 +257,7 @@ Third-party assets remain subject to their original license terms.
     <visual>
       <origin xyz="0 -0.021 0" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file:///home/tarunbhyri9/project_repo/roboracer_state_estimation/packages/src/roboracer_gazebo/models/f110_car/meshes/wheel.dae"/>
+        <mesh filename="file:///home/dhanush/rrstack/packages/src/roboracer_gazebo/models/f110_car/meshes/wheel.dae"/>
       </geometry>
     </visual>
   </link>
@@ -289,7 +289,7 @@ Third-party assets remain subject to their original license terms.
     <visual>
       <origin xyz="0 0 0" rpy="0 0 1.57"/>
       <geometry>
-        <mesh filename="file:///home/tarunbhyri9/project_repo/roboracer_state_estimation/packages/src/roboracer_gazebo/models/f110_car/meshes/realsense.dae"/>
+        <mesh filename="file:///home/dhanush/rrstack/packages/src/roboracer_gazebo/models/f110_car/meshes/realsense.dae"/>
       </geometry>
     </visual>
   </link>
@@ -318,7 +318,7 @@ Third-party assets remain subject to their original license terms.
     <visual>
       <origin xyz="0 0 0.0225" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file:///home/tarunbhyri9/project_repo/roboracer_state_estimation/packages/src/roboracer_gazebo/models/f110_car/meshes/hokuyo.dae"/>
+        <mesh filename="file:///home/dhanush/rrstack/packages/src/roboracer_gazebo/models/f110_car/meshes/hokuyo.dae"/>
       </geometry>
     </visual>
   </link>
