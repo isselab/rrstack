@@ -1,0 +1,34 @@
+wall_centerline_node:
+  ros__parameters:
+    scan_topic: /scan
+    base_frame: base_link
+    path_topic: /local_centerline
+    marker_topic: /wall_centerline/markers
+    minimum_forward_distance: 0.15
+    maximum_forward_distance: 7.0
+    maximum_lateral_distance: 4.0
+    wall_track_width: 1.8
+    wall_path_start: 0.45
+    wall_path_horizon: 6.5
+    wall_station_spacing: 0.25
+    wall_bin_half_width: 0.20
+    # wall_minimum_side_distance: 0.20
+    # wall_minimum_points_per_bin: 2
+    # allow_single_wall_estimation: true
+    # smoothing_window: 3
+
+
+pure_pursuit_node:
+  ros__parameters:
+    path_topic: /local_centerline
+    command_topic: /cmd_vel
+    control_frequency: 20.0
+    minimum_path_points: 2
+    lookahead_distance: 0.85
+    wheelbase: 0.32
+    target_speed: 0.45
+    minimum_speed: 0.22
+    maximum_speed: 0.55
+    maximum_steering_angle: 0.55
+    curvature_speed_gain: 1.25
+    minimum_forward_distance: 0.10
