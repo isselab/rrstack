@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 AVAI Team, Chair of Software Engineering, Ruhr University Bochum
 
 import math
 from typing import List, Optional, Tuple
@@ -7,6 +9,7 @@ import rclpy
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Path
 from rclpy.node import Node
+from rclpy.time import Time
 
 XY = Tuple[float, float]
 
@@ -21,6 +24,7 @@ class PurePursuitNode(Node):
         self._declare_parameters()
         self._read_parameters()
         self.latest_path: List[XY] = []
+        self.latest_path_time: Optional[Time] = None
 
         self.path_subscription = self.create_subscription(
             Path,
@@ -63,6 +67,7 @@ class PurePursuitNode(Node):
             "minimum_path_points": 2,
 
             "control_frequency": 30.0,
+            "path_timeout": 0.5,
         }
 
         for parameter_name, default_value in parameter_defaults.items():
@@ -124,6 +129,10 @@ class PurePursuitNode(Node):
             self.get_parameter("control_frequency").value
         )
 
+        self.path_timeout = float(
+            self.get_parameter("path_timeout").value
+        )
+
     def _path_callback(
         self,
         path_message: Path,
@@ -148,6 +157,7 @@ class PurePursuitNode(Node):
             )
 
         self.latest_path = received_path
+        self.latest_path_time = self.get_clock().now()
 
     def _find_nearest_forward_index(
         self,
@@ -309,7 +319,7 @@ class PurePursuitNode(Node):
 
         return speed
 
-    def _publish_stop(self) -> None:
+    def publish_stop(self) -> None:
         """
         Stop the vehicle safely.
         """
@@ -330,7 +340,26 @@ class PurePursuitNode(Node):
 
         # Step 1: ensure a usable path exists.
         if len(self.latest_path) < self.minimum_path_points:
-            self._publish_stop()
+            self.publish_stop()
+            return
+
+        # Step 1b: ensure that path is still recent. Without this the node
+        # would keep steering along the last path it ever received if the
+        # centerline node stopped publishing.
+        if self.latest_path_time is None:
+            self.publish_stop()
+            return
+
+        path_age = (
+            self.get_clock().now() - self.latest_path_time
+        ).nanoseconds * 1e-9
+
+        if path_age > self.path_timeout:
+            self.publish_stop()
+            self.get_logger().warn(
+                f"no centerline for {path_age:.2f} s; stopping",
+                throttle_duration_sec=1.0,
+            )
             return
 
         # Step 2: find the nearest forward waypoint.
@@ -339,7 +368,7 @@ class PurePursuitNode(Node):
         )
 
         if nearest_index is None:
-            self._publish_stop()
+            self.publish_stop()
             return
 
         # Step 3: select the lookahead goal point.
@@ -349,7 +378,7 @@ class PurePursuitNode(Node):
         )
 
         if target is None:
-            self._publish_stop()
+            self.publish_stop()
             return
 
         # Step 4: calculate the angle to the target.
@@ -400,7 +429,7 @@ def main(args=None) -> None:
     except KeyboardInterrupt:
         pass
     finally:
-        node._publish_stop()
+        node.publish_stop()
         node.destroy_node()
         rclpy.shutdown()
 

@@ -24,6 +24,7 @@ pure_pursuit_node:
     command_topic: /cmd_vel
     control_frequency: 20.0
     minimum_path_points: 2
+    path_timeout: 0.5
     lookahead_distance: 0.85
     wheelbase: 0.32
     target_speed: 0.45
