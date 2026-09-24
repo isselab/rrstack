@@ -43,6 +43,7 @@ def generate_launch_description():
     urdf_file = os.path.join(pkg, 'models', 'f110_car', 'f110_car.urdf')
     with open(urdf_file, 'r') as f:
         robot_description = f.read()
+        robot_description = robot_description.replace('package://roboracer_gazebo', 'file://' + pkg)
 
     # ===== Gazebo Classic =====
     # Start gzserver
