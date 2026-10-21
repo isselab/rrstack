@@ -39,8 +39,11 @@ def find_default_model():
     except Exception:
         pass
 
-    # Source tree: <pkg>/roboracer_perception/<this file> -> <pkg>/models/best.pt
-    candidates.append(Path(__file__).resolve().parent.parent / 'models' / 'best.pt')
+
+    # Fallback (backup): only used if the installed share/ path above is not found,
+    # e.g. when running yolo_node.py directly without colcon build.
+    # Source tree: model sits next to this file in models/
+    candidates.append(Path(__file__).resolve().parent / 'models' / 'best.pt')  # 2nd: fixed
 
     for path in candidates:
         if path.is_file():
@@ -54,9 +57,9 @@ class YoloConeDebugNode(Node):
     def __init__(self):
         super().__init__('yolo_cone_debug_node')
 
-        self.declare_parameter('image_topic', '/camera/camera/image_raw')
-        self.declare_parameter('depth_topic', '/camera/camera/depth/image_raw')
-        self.declare_parameter('camera_info_topic', '/camera/camera/camera_info')
+        self.declare_parameter('image_topic', '/camera/camera/color/image_raw')         # was /camera/camera/image_raw
+        self.declare_parameter('depth_topic', '/camera/camera/depth/image_raw')         # unchanged
+        self.declare_parameter('camera_info_topic', '/camera/camera/color/camera_info') # was /camera/camera/camera_info
         self.declare_parameter('model_path', find_default_model())
         self.declare_parameter('confidence_threshold', 0.05)
         self.declare_parameter('blue_conf', 0.3)
@@ -163,7 +166,7 @@ class YoloConeDebugNode(Node):
                 v = (y1 + y2) // 2
                 z = float(depth[v, u])
 
-                if z <= 0.0 or z > 10.0 or not np.isfinite(z) or self._fx is None:
+                if z <= 0.0 or z > self._max_depth or not np.isfinite(z) or self._fx is None: 
                     continue
 
                 x = (u - self._cx) * z / self._fx

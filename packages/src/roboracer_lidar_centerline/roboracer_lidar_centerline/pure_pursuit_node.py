@@ -6,7 +6,7 @@ import math
 from typing import List, Optional, Tuple
 
 import rclpy
-from geometry_msgs.msg import Twist
+from ackermann_msgs.msg import AckermannDriveStamped 
 from nav_msgs.msg import Path
 from rclpy.node import Node
 from rclpy.time import Time
@@ -34,7 +34,7 @@ class PurePursuitNode(Node):
         )
 
         self.command_publisher = self.create_publisher(
-            Twist,
+            AckermannDriveStamped,      
             self.command_topic,
             10,
         )
@@ -51,7 +51,7 @@ class PurePursuitNode(Node):
 
         parameter_defaults = {
             "path_topic": "/local_centerline",
-            "command_topic": "/cmd_vel",
+            "command_topic": "/drive",
 
             "lookahead_distance": 0.85,
             "wheelbase": 0.32,
@@ -75,6 +75,15 @@ class PurePursuitNode(Node):
                 parameter_name,
                 default_value,
             )
+
+    def _make_drive(self, speed: float, steering: float) -> AckermannDriveStamped:
+        """Build an Ackermann drive command."""
+        msg = AckermannDriveStamped()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = "base_link"
+        msg.drive.speed = float(speed)
+        msg.drive.steering_angle = float(steering)
+        return msg
 
     def _read_parameters(self) -> None:
         """
@@ -318,20 +327,17 @@ class PurePursuitNode(Node):
         )
 
         return speed
+    
 
     def publish_stop(self) -> None:
         """
         Stop the vehicle safely.
         """
 
-        stop_command = Twist()
-
-        stop_command.linear.x = 0.0
-        stop_command.angular.z = 0.0
-
         self.command_publisher.publish(
-            stop_command
+            self._make_drive(0.0, 0.0)
         )
+
 
     def _control_callback(self) -> None:
         """
@@ -403,13 +409,8 @@ class PurePursuitNode(Node):
         )
 
         # Step 8: create and publish the command.
-        command = Twist()
-
-        command.linear.x = float(speed)
-        command.angular.z = float(steering_angle)
-
         self.command_publisher.publish(
-            command
+            self._make_drive(speed, steering_angle)
         )
 
         self.get_logger().info(

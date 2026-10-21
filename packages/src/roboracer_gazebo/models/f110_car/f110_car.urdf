@@ -266,7 +266,7 @@ Third-party assets remain subject to their original license terms.
        SENSORS
        =================================================== -->
 
-  <!-- Camera (RealSense) -->
+    <!-- Camera (RealSense) -->
   <joint name="camera_joint" type="fixed">
     <origin xyz="0.21 0 0.075" rpy="0 0 0"/>
     <parent link="chassis"/>
@@ -293,6 +293,14 @@ Third-party assets remain subject to their original license terms.
       </geometry>
     </visual>
   </link>
+
+  <!-- Optical frame: z forward, x right, y down (camera image convention) -->
+  <link name="camera_color_optical_frame"/>
+  <joint name="camera_optical_joint" type="fixed">
+    <parent link="camera"/>
+    <child link="camera_color_optical_frame"/>
+    <origin xyz="0 0 0" rpy="-1.5708 0 -1.5708"/>
+  </joint>
 
   <!-- Lidar (Hokuyo) -->
   <joint name="laser_joint" type="fixed">
@@ -419,30 +427,40 @@ Third-party assets remain subject to their original license terms.
     </sensor>
   </gazebo>
 
-  <!-- Camera -->
+
+  <!-- Camera (RGB + Depth) - matched to real D435 spec -->
   <gazebo reference="camera">
-    <sensor name="camera" type="camera">
+    <sensor name="realsense_d435" type="depth">
       <always_on>true</always_on>
       <update_rate>30</update_rate>
       <visualize>false</visualize>
       <camera name="head">
-        <horizontal_fov>1.3962634</horizontal_fov>
+        <horizontal_fov>1.2113</horizontal_fov>
         <image>
-          <width>800</width>
-          <height>800</height>
+          <width>640</width>
+          <height>480</height>
           <format>R8G8B8</format>
         </image>
         <clip>
-          <near>0.02</near>
+          <near>0.105</near>
           <far>300</far>
         </clip>
       </camera>
       <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
+        <ros>
+          <namespace>camera</namespace>
+          <remapping>camera/image_raw:=camera/color/image_raw</remapping>
+          <remapping>camera/camera_info:=camera/color/camera_info</remapping>
+          <remapping>camera/points:=camera/depth/color/points</remapping>
+        </ros>
         <camera_name>camera</camera_name>
-        <frame_name>camera</frame_name>
+        <frame_name>camera_color_optical_frame</frame_name>
+        <min_depth>0.105</min_depth>
+        <max_depth>10.0</max_depth>
       </plugin>
     </sensor>
   </gazebo>
+
 
   <!-- Joint state publisher -->
   <gazebo>
