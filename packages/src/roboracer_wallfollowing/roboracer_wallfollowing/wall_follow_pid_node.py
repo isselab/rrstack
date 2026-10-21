@@ -9,7 +9,8 @@
 import math
 
 import rclpy
-from geometry_msgs.msg import Point, Twist
+from ackermann_msgs.msg import AckermannDriveStamped
+from geometry_msgs.msg import Point
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
 from sensor_msgs.msg import LaserScan
@@ -46,7 +47,7 @@ class WallFollowPIDNode(Node):
         self.declare_parameter('publish_markers', True)
         self.declare_parameter('scan_topic', '/scan')
         self.declare_parameter('odom_topic', '/odom')
-        self.declare_parameter('cmd_vel_topic', '/cmd_vel')
+        self.declare_parameter('drive_topic', '/drive')
         self.declare_parameter('marker_topic', '/wall_follow/markers')
 
         p = self.get_parameter
@@ -80,7 +81,7 @@ class WallFollowPIDNode(Node):
         self._current_speed = 0.0
         self._latest_scan = None
 
-        self._cmd_pub = self.create_publisher(Twist, p('cmd_vel_topic').value, 10)
+        self._cmd_pub = self.create_publisher(AckermannDriveStamped, p('drive_topic').value, 10)
         self._marker_pub = self.create_publisher(MarkerArray, p('marker_topic').value, 10)
         self.create_subscription(LaserScan, p('scan_topic').value, self._scan_cb, 10)
         self.create_subscription(Odometry, p('odom_topic').value, self._odom_cb, 10)
@@ -187,9 +188,11 @@ class WallFollowPIDNode(Node):
         return steering
 
     def _publish(self, speed, steering):
-        msg = Twist()
-        msg.linear.x = float(speed)
-        msg.angular.z = float(steering)
+        msg = AckermannDriveStamped()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = 'base_link'
+        msg.drive.speed = float(speed)
+        msg.drive.steering_angle = float(steering)
         self._cmd_pub.publish(msg)
 
     def _recover(self, dt, reason):

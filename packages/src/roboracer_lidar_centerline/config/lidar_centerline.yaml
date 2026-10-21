@@ -21,7 +21,7 @@ wall_centerline_node:
 pure_pursuit_node:
   ros__parameters:
     path_topic: /local_centerline
-    command_topic: /cmd_vel
+    command_topic: /drive
     control_frequency: 20.0
     minimum_path_points: 2
     path_timeout: 0.5
