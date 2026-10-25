@@ -3,15 +3,16 @@
 <package format="3">
   <name>roboracer_gazebo</name>
   <version>0.1.0</version>
-  <description>Gazebo Classic simulation package for RoboRacer F110 car</description>
+  <description>Ignition Gazebo (Fortress) simulation package for RoboRacer F110 car</description>
 
   <maintainer email="your@email.com">Your Name</maintainer>
   <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <depend>gazebo_ros</depend>
-  <depend>gazebo_plugins</depend>
+  <depend>ros_gz_sim</depend>
+  <depend>ros_gz_bridge</depend>
+  <depend>ros_gz_interfaces</depend>
   <depend>robot_state_publisher</depend>
   <depend>joint_state_publisher</depend>
   <depend>xacro</depend>

@@ -57,9 +57,9 @@ class YoloConeDebugNode(Node):
     def __init__(self):
         super().__init__('yolo_cone_debug_node')
 
-        self.declare_parameter('image_topic', '/camera/camera/color/image_raw')         # was /camera/camera/image_raw
-        self.declare_parameter('depth_topic', '/camera/camera/depth/image_raw')         # unchanged
-        self.declare_parameter('camera_info_topic', '/camera/camera/color/camera_info') # was /camera/camera/camera_info
+        self.declare_parameter('image_topic', '/camera/color/image_raw')
+        self.declare_parameter('depth_topic', '/camera/depth/image_raw')
+        self.declare_parameter('camera_info_topic', '/camera/color/camera_info')
         self.declare_parameter('model_path', find_default_model())
         self.declare_parameter('confidence_threshold', 0.05)
         self.declare_parameter('blue_conf', 0.3)

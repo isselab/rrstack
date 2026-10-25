@@ -5,6 +5,7 @@
 # Part of the rrstack RoboRacer reinforcement learning package.
 
 import math
+import subprocess
 import time
 from typing import Optional, Tuple
 
@@ -14,7 +15,11 @@ from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
 from sensor_msgs.msg import LaserScan
-from std_srvs.srv import Empty
+
+try:
+    from ros_gz_interfaces.srv import ControlWorld
+except ImportError:  # pragma: no cover
+    ControlWorld = None
 
 try:
     import gymnasium as gym
@@ -34,7 +39,13 @@ class RoboRacerEnv(gym.Env if gym is not None else object):
         scan_topic: str = '/scan',
         odom_topic: str = '/odom',
         cmd_vel_topic: str = '/cmd_vel',
-        reset_service: str = '/reset_world',
+        reset_service: str = '/world/roboracer_track/control',
+        world_name: str = 'roboracer_track',
+        model_name: str = 'f110_car',
+        spawn_x: float = 0.0,
+        spawn_y: float = 0.0,
+        spawn_z: float = 0.1,
+        spawn_yaw: float = 0.0,
         lidar_bins: int = 36,
         fixed_speed: float = 1.5,
         step_duration: float = 0.1,
@@ -66,6 +77,12 @@ class RoboRacerEnv(gym.Env if gym is not None else object):
         self.wall_distance = wall_distance
         self.max_lidar_range = max_lidar_range
         self.steering_values = steering_values or (-0.6, -0.3, 0.0, 0.3, 0.6)
+        self.world_name = world_name
+        self.model_name = model_name
+        self.spawn_x = spawn_x
+        self.spawn_y = spawn_y
+        self.spawn_z = spawn_z
+        self.spawn_yaw = spawn_yaw
 
         self.latest_scan = None
         self.latest_odom = None
@@ -79,7 +96,11 @@ class RoboRacerEnv(gym.Env if gym is not None else object):
         self.odom_sub = self.node.create_subscription(
             Odometry, odom_topic, self._odom_callback, 10
         )
-        self.reset_client = self.node.create_client(Empty, reset_service)
+        self.reset_client = (
+            self.node.create_client(ControlWorld, reset_service)
+            if ControlWorld is not None
+            else None
+        )
 
         self.action_space = spaces.Discrete(len(self.steering_values))
         self.observation_space = spaces.Box(
@@ -123,18 +144,68 @@ class RoboRacerEnv(gym.Env if gym is not None else object):
         self._publish_cmd(0.0, 0.0)
         self._spin_for(0.05)
 
-    def _reset_gazebo(self) -> None:
-        if not self.reset_client.wait_for_service(timeout_sec=2.0):
-            self.node.get_logger().warning(
-                'Gazebo reset service is not available; continuing without reset.'
-            )
-            return
-        future = self.reset_client.call_async(Empty.Request())
-        end_time = time.monotonic() + 3.0
+    def _call_service(self, client, request, timeout: float = 3.0) -> bool:
+        if client is None or not client.wait_for_service(timeout_sec=2.0):
+            return False
+        future = client.call_async(request)
+        end_time = time.monotonic() + timeout
         while time.monotonic() < end_time and not future.done():
             rclpy.spin_once(self.node, timeout_sec=0.05)
-        if not future.done():
-            self.node.get_logger().warning('Timed out waiting for Gazebo reset.')
+        return future.done()
+
+    def _teleport_home(self) -> bool:
+        # The Ignition /world/<world>/set_pose service expects a flat
+        # ignition.msgs.Pose request that the ros_gz parameter_bridge cannot
+        # map onto ros_gz_interfaces/srv/SetEntityPose. Calling the `ign
+        # service` CLI directly is the simplest reliable way to teleport the
+        # car back to its spawn pose between episodes.
+        half = self.spawn_yaw * 0.5
+        qz = math.sin(half)
+        qw = math.cos(half)
+        service = f'/world/{self.world_name}/set_pose'
+        request = (
+            f'name: "{self.model_name}", '
+            f'position: {{x: {self.spawn_x}, y: {self.spawn_y}, z: {self.spawn_z}}}, '
+            f'orientation: {{x: 0.0, y: 0.0, z: {qz}, w: {qw}}}'
+        )
+        try:
+            result = subprocess.run(
+                [
+                    'ign', 'service', '-s', service,
+                    '--reqtype', 'ignition.msgs.Pose',
+                    '--reptype', 'ignition.msgs.Boolean',
+                    '--timeout', '3000',
+                    '--req', request,
+                ],
+                capture_output=True, text=True, timeout=6.0,
+            )
+        except (OSError, subprocess.SubprocessError) as exc:
+            self.node.get_logger().warning(f'Failed to run `ign service`: {exc}')
+            return False
+        return 'data: true' in result.stdout
+
+    def _reset_gazebo(self) -> None:
+        # Ignition's world-control "reset" only rewinds the clock and plugin
+        # state; it does NOT teleport the model back to its spawn pose. So the
+        # car is teleported home first, then the clock is reset. This mirrors
+        # what the RL environment expects at the start of every episode.
+
+        # 1) Teleport the car back to its spawn pose.
+        if not self._teleport_home():
+            self.node.get_logger().warning(
+                'Failed to teleport car to spawn pose; continuing anyway.'
+            )
+
+        # 2) Reset world time / plugin state.
+        if self.reset_client is not None:
+            req = ControlWorld.Request()
+            req.world_control.reset.all = True
+            if not self._call_service(self.reset_client, req):
+                self.node.get_logger().warning('Timed out waiting for Gazebo reset.')
+        else:
+            self.node.get_logger().warning(
+                'ros_gz_interfaces is not available; continuing without clock reset.'
+            )
 
     def _sectorize_scan(self) -> np.ndarray:
         ranges = np.asarray(self.latest_scan.ranges, dtype=np.float32)

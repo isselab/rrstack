@@ -1,6 +1,20 @@
 <?xml version="1.0" ?>
-<sdf version="1.6">
+<sdf version="1.9">
   <world name="flw_cone_track_from_walls_lane_origin">
+
+    <!-- ===== IGNITION SYSTEMS ===== -->
+    <plugin filename="ignition-gazebo-physics-system"
+            name="ignition::gazebo::systems::Physics"/>
+    <plugin filename="ignition-gazebo-user-commands-system"
+            name="ignition::gazebo::systems::UserCommands"/>
+    <plugin filename="ignition-gazebo-scene-broadcaster-system"
+            name="ignition::gazebo::systems::SceneBroadcaster"/>
+    <plugin filename="ignition-gazebo-sensors-system"
+            name="ignition::gazebo::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin filename="ignition-gazebo-imu-system"
+            name="ignition::gazebo::systems::Imu"/>
 
     <physics name="default_physics" default="true" type="ode">
       <max_step_size>0.001</max_step_size>
@@ -44,7 +58,11 @@
         </collision>
         <visual name="visual">
           <geometry><plane><normal>0 0 1</normal><size>100 100</size></plane></geometry>
-          <material><script><uri>file://media/materials/scripts/gazebo.material</uri><name>Gazebo/Grey</name></script></material>
+          <material>
+            <ambient>0.5 0.5 0.5 1</ambient>
+            <diffuse>0.5 0.5 0.5 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
         </visual>
       </link>
     </model>

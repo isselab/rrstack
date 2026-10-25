@@ -1,7 +1,8 @@
 <?xml version="1.0" ?>
 <!--
-rrstack RoboRacer Gazebo integration.
+rrstack RoboRacer Gazebo (Ignition) integration.
 Author of rrstack modifications: Sai Tarun Bhyri
+Copyright (c) 2026 AVAI Team, Chair of Software Engineering, Ruhr University Bochum
 
 Note: Some Gazebo meshes, model files, world files, and structure are based on
 or inspired by TU Dortmund RoboRacer/F1TENTH reference files, where applicable.
@@ -9,12 +10,26 @@ Third-party assets remain subject to their original license terms.
 -->
 
 <!--
-  roboracer_track.world — Gazebo Classic
+  roboracer_track.world — Ignition Gazebo (Fortress)
   FLW-Halle-2 indoor racetrack. Mesh is in mm, scale=0.001 applied in model.sdf.
   Car spawn point: x=0, y=0, z=0.1 (start of track, near centre)
 -->
-<sdf version="1.6">
+<sdf version="1.9">
   <world name="roboracer_track">
+
+    <!-- ===== IGNITION SYSTEMS ===== -->
+    <plugin filename="ignition-gazebo-physics-system"
+            name="ignition::gazebo::systems::Physics"/>
+    <plugin filename="ignition-gazebo-user-commands-system"
+            name="ignition::gazebo::systems::UserCommands"/>
+    <plugin filename="ignition-gazebo-scene-broadcaster-system"
+            name="ignition::gazebo::systems::SceneBroadcaster"/>
+    <plugin filename="ignition-gazebo-sensors-system"
+            name="ignition::gazebo::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin filename="ignition-gazebo-imu-system"
+            name="ignition::gazebo::systems::Imu"/>
 
     <!-- ===== PHYSICS ===== -->
     <physics name="default_physics" default="true" type="ode">
@@ -76,23 +91,20 @@ Third-party assets remain subject to their original license terms.
             </plane>
           </geometry>
           <material>
-            <script>
-              <uri>file://media/materials/scripts/gazebo.material</uri>
-              <name>Gazebo/Grey</name>
-            </script>
+            <ambient>0.5 0.5 0.5 1</ambient>
+            <diffuse>0.5 0.5 0.5 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
           </material>
         </visual>
       </link>
     </model>
 
     <!-- ===== FLW HALL TRACK ===== -->
-    
     <include>
       <uri>model://flw_track</uri>
       <name>flw_track</name>
       <pose>0 0 0 0 0 0</pose>
     </include>
-    
 
   </world>
 </sdf>

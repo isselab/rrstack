@@ -1,10 +1,14 @@
 <?xml version="1.0" ?>
-<sdf version="1.6">
+<sdf version="1.9">
   <model name="blue_cone">
     <static>true</static>
 
     <link name="cone_link">
 
+      <!-- Visual: cone mesh (cone_mesh.dae, now regenerated WITH a NORMAL
+           channel so OGRE2 renders it correctly on Intel/Mesa). Single solid
+           colour. The mesh is 0.18 m radius x 0.45 m tall with its base at
+           z=0, scaled 0.65 -> radius 0.117 m, height 0.2925 m. -->
       <visual name="visual">
         <geometry>
           <mesh>
@@ -19,12 +23,16 @@
         </material>
       </visual>
 
+      <!-- Collision: cylinder primitive (robust on the Fortress dartsim
+           physics plugin). Matches the cone's base footprint:
+           radius 0.117 m, height 0.2925 m, lifted by half height. -->
       <collision name="collision">
+        <pose>0 0 0.14625 0 0 0</pose>
         <geometry>
-          <mesh>
-            <uri>model://blue_cone/meshes/cone_mesh.dae</uri>
-            <scale>0.65 0.65 0.65</scale>
-          </mesh>
+          <cylinder>
+            <radius>0.117</radius>
+            <length>0.2925</length>
+          </cylinder>
         </geometry>
       </collision>
 

@@ -8,7 +8,7 @@ or inspired by TU Dortmund RoboRacer/F1TENTH reference files, where applicable.
 Third-party assets remain subject to their original license terms.
 -->
 
-<sdf version="1.6">
+<sdf version="1.9">
   <model name="flw_track">
     <static>true</static>
     <link name="link">

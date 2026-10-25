@@ -39,7 +39,8 @@ source install/setup.bash
 
 ### Launch the SLAM Simulation
 
-Open the first terminal and run:
+The simulation uses **Ignition Gazebo (Fortress)** via `ros_gz_sim` and the
+`ros_gz_bridge`. Open the first terminal and run:
 
 ```bash
 cd ~/project_repo/roboracer_state_estimation/packages
@@ -50,9 +51,11 @@ source install/setup.bash
 LIBGL_ALWAYS_SOFTWARE=1 ros2 launch roboracer_slam sim_slam_rviz.launch.py
 ```
 
-This launch file starts the RoboRacer Gazebo simulation, SLAM Toolbox, and RViz.
+This launch file starts the RoboRacer Ignition Gazebo simulation, SLAM Toolbox, and RViz.
 
-`LIBGL_ALWAYS_SOFTWARE=1` enables software rendering and can be useful when running the simulation inside a virtual machine or on a system with limited graphics acceleration.
+`LIBGL_ALWAYS_SOFTWARE=1` enables software rendering and can be useful when running the simulation inside a virtual machine or on a system with limited graphics acceleration. The LiDAR, RGBD camera, and IMU are rendered with the `ogre2` engine; without a GPU the sensor update rates drop below their configured maximums, which is expected.
+
+Add `gui:=false` to run the simulator headless (no Ignition GUI window).
 
 ### RViz Configuration
 
@@ -74,10 +77,10 @@ Add the following displays manually:
 The main SLAM data flow is:
 
 ```text
-Gazebo LiDAR
+Ignition Gazebo LiDAR (gpu_lidar)
     |
     v
-/scan
+/scan          (bridged by ros_gz_bridge)
     |
     v
 slam_toolbox
@@ -86,10 +89,10 @@ slam_toolbox
     |
     +----> map -> odom transform
 
-Vehicle odometry
+Vehicle odometry (AckermannSteering plugin)
     |
     v
-/odom
+/odom          (bridged by ros_gz_bridge)
 ```
 
 The vehicle must move through the environment so that SLAM Toolbox receives LiDAR measurements from different positions and gradually constructs the occupancy-grid map.
@@ -229,7 +232,7 @@ source install/setup.bash
 
 ### Launch Wall Following
 
-The launch file starts the Gazebo simulation, spawns the vehicle, and runs the controller.
+The launch file starts the Ignition Gazebo simulation, spawns the vehicle, and runs the controller.
 
 ```bash
 cd ~/project_repo/roboracer_state_estimation/packages
@@ -253,7 +256,7 @@ ros2 launch roboracer_wallfollowing wall_follow.launch.py \
     world:=$(ros2 pkg prefix roboracer_gazebo)/share/roboracer_gazebo/worlds/flw_cone_track_from_walls.world
 ```
 
-Available launch arguments are `side`, `world`, `x`, `y`, `z`, and `yaw`.
+Available launch arguments are `side`, `world`, `world_name`, `x`, `y`, `z`, `yaw`, and `gui`.
 
 ### Topics
 
@@ -308,6 +311,33 @@ packages/src/roboracer_gazebo/worlds/flw_cone_track_from_walls.world
 
 This environment contains blue and yellow cones positioned along the track boundaries. It can be used for cone detection, LiDAR perception, boundary extraction, path planning, and autonomous-driving experiments.
 
+### Ignition Gazebo migration notes
+
+The simulation was ported from Gazebo Classic to **Ignition Gazebo (Fortress)**:
+
+| Area | Gazebo Classic (old) | Ignition Gazebo (current) |
+|---|---|---|
+| Simulator launch | `gazebo_ros` `gzserver`/`gzclient` | `ros_gz_sim` `gz_sim.launch.py` |
+| Spawn | `spawn_entity.py` (URDF) | `ros_gz_sim create` (`model.sdf`) |
+| Model path env | `GAZEBO_MODEL_PATH` | `IGN_GAZEBO_RESOURCE_PATH` |
+| Car model | `f110_car.urdf` + `<gazebo>` plugins | `f110_car/model.sdf` (SDF 1.9) |
+| Drive plugin | `libgazebo_ros_ackermann_drive.so` | `ignition-gazebo-ackermann-steering-system` |
+| LiDAR | `libgazebo_ros_ray_sensor.so` | `gpu_lidar` sensor + `Sensors` system |
+| Camera | `libgazebo_ros_camera.so` | `rgbd_camera` sensor + `Sensors` system |
+| IMU | `libgazebo_ros_imu_sensor.so` | `imu` sensor + `Imu` system |
+| Joint states | `libgazebo_ros_joint_state_publisher.so` | `ignition-gazebo-joint-state-publisher-system` |
+| ROS bridge | direct `gazebo_ros` plugins | `ros_gz_bridge` `parameter_bridge` |
+| RL world reset | `/reset_world` (`std_srvs/Empty`) | `/world/<world>/control` + `ign service .../set_pose` |
+
+The car is spawned from `models/f110_car/model.sdf`. The `f110_car.urdf` is
+kept only so that `robot_state_publisher` can publish the TF tree of the static
+frames; all physics, drive, and sensor behaviour lives in the SDF model.
+
+Topics exposed to ROS (unchanged names, so downstream nodes do not change):
+`/cmd_vel`, `/odom`, `/scan`, `/imu`, `/joint_states`, `/clock`, `/tf`,
+`/camera/color/image_raw`, `/camera/depth/image_raw`, `/camera/color/camera_info`,
+`/camera/depth/color/points`.
+
 ### Build the Gazebo Package
 
 After adding or modifying the world or cone models, rebuild the workspace:
@@ -324,7 +354,7 @@ colcon build \
 source install/setup.bash
 ```
 
-### Launch the Cone Track in Gazebo
+### Launch the Cone Track in Ignition Gazebo
 
 ```bash
 cd ~/project_repo/roboracer_state_estimation/packages
@@ -333,8 +363,13 @@ source /opt/ros/humble/setup.bash
 source install/setup.bash
 
 ros2 launch roboracer_gazebo gazebo.launch.py \
-    world:=$(ros2 pkg prefix roboracer_gazebo)/share/roboracer_gazebo/worlds/flw_cone_track_from_walls.world
+    world:=$(ros2 pkg prefix roboracer_gazebo)/share/roboracer_gazebo/worlds/flw_cone_track_from_walls.world \
+    world_name:=flw_cone_track_from_walls_lane_origin
 ```
+
+`world_name` must match the `<world name="...">` attribute inside the world
+file; it is only needed to build the reset-service topic. For the two built-in
+worlds it is inferred automatically from `world:=walls` / `world:=cones`.
 
 ### Launch SLAM with the Cone Track
 
@@ -348,7 +383,9 @@ LIBGL_ALWAYS_SOFTWARE=1 ros2 launch roboracer_slam sim_slam_rviz.launch.py \
     world:=$(ros2 pkg prefix roboracer_gazebo)/share/roboracer_gazebo/worlds/flw_cone_track_from_walls.world
 ```
 
-The cone models referenced by the world must be available to Gazebo. The expected model names are:
+The cone models referenced by the world must be available to Ignition Gazebo
+via `IGN_GAZEBO_RESOURCE_PATH` (the launch file sets it to the package's
+`models/` directory automatically). The expected model names are:
 
 ```text
 model://blue_cone
@@ -391,5 +428,5 @@ grep -n "blue_cone\|yellow_cone" \
     packages/src/roboracer_gazebo/worlds/flw_cone_track_from_walls.world
 ```
 
-If the cones do not appear in Gazebo, verify that the model names inside `model.config`, `model.sdf`, and the world file are consistent.
+If the cones do not appear in Ignition Gazebo, verify that the model names inside `model.config`, `model.sdf`, and the world file are consistent.
 

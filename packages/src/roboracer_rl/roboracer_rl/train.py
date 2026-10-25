@@ -24,7 +24,8 @@ def parse_args():
     parser.add_argument('--scan-topic', default='/scan')
     parser.add_argument('--odom-topic', default='/odom')
     parser.add_argument('--cmd-vel-topic', default='/cmd_vel')
-    parser.add_argument('--reset-service', default='/reset_world')
+    parser.add_argument('--reset-service', default='/world/roboracer_track/control')
+    parser.add_argument('--world-name', default='roboracer_track')
     args, _ = parser.parse_known_args()
     return args
 
@@ -46,6 +47,7 @@ def main():
         odom_topic=args.odom_topic,
         cmd_vel_topic=args.cmd_vel_topic,
         reset_service=args.reset_service,
+        world_name=args.world_name,
         lidar_bins=args.lidar_bins,
         fixed_speed=args.fixed_speed,
         step_duration=args.step_duration,
