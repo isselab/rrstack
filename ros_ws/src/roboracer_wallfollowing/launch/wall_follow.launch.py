@@ -46,7 +46,7 @@ def generate_launch_description():
         output="screen",
         parameters=[
             str(params_file),
-            {"side": side},
+            {"side": side, "use_sim_time": True},
         ],
     )
 
@@ -57,6 +57,7 @@ def generate_launch_description():
         executable="drive_to_cmd_vel",
         name="drive_to_cmd_vel",
         output="screen",
+        parameters=[{"use_sim_time": True}],
     )
 
     return LaunchDescription([

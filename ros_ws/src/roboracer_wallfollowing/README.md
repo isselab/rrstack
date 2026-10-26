@@ -199,7 +199,7 @@ The controller does not hold its last command when the geometry is unusable. If 
 ## Build
 
 ```bash
-cd ~/project_repo/roboracer_state_estimation/packages
+cd ~/rrstack/ros_ws
 
 source /opt/ros/humble/setup.bash
 
@@ -215,7 +215,7 @@ source install/setup.bash
 The launch file starts Gazebo, spawns the vehicle, and starts the controller.
 
 ```bash
-cd ~/project_repo/roboracer_state_estimation/packages
+cd ~/rrstack/ros_ws
 
 source /opt/ros/humble/setup.bash
 source install/setup.bash
@@ -323,7 +323,7 @@ The simulated LiDAR has a minimum range of `0.2 m`. The default rejection floor 
 Start RViz alongside the simulation:
 
 ```bash
-cd ~/project_repo/roboracer_state_estimation/packages
+cd ~/rrstack/ros_ws
 
 source /opt/ros/humble/setup.bash
 source install/setup.bash

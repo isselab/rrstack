@@ -101,7 +101,7 @@ def generate_launch_description():
         executable='robot_state_publisher',
         name='robot_state_publisher',
         output='screen',
-        parameters=[{'robot_description': robot_description}]
+        parameters=[{'robot_description': robot_description, 'use_sim_time': True}]
     )
 
     # ===== Spawn the Ignition SDF model into the world =====
@@ -134,6 +134,7 @@ def generate_launch_description():
         executable='parameter_bridge',
         name='ros_gz_bridge',
         output='screen',
+        parameters=[{'use_sim_time': True}],
         arguments=[
             # drive command: ROS -> Ignition
             '/cmd_vel@geometry_msgs/msg/Twist]ignition.msgs.Twist',

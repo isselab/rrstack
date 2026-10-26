@@ -1,432 +1,148 @@
+# RUB RoboRacer
 
-## Attribution
+ROS 2 software stack for the RoboRacer (F1TENTH-style) car of the AVAI team, Chair of Software Engineering, Ruhr University Bochum.
+The car is simulated in **Ignition Gazebo (Fortress)** with the same ROS interfaces as the real car: LiDAR, RealSense RGB-D camera, IMU, and Ackermann drive commands on `/drive`.
 
-This repository is maintained for the RoboRacer/AVAI setup at the Chair of Software Engineering, Ruhr University Bochum.
-
-Parts of this repository are adapted from TUD RoboRacer reference material and have been modified for the `rrstack` setup. Where applicable, source files include license headers or reference notes.
+Parts of this repository are adapted from TUD RoboRacer reference material and have been modified for this setup. Where applicable, source files include license headers or reference notes.
 
 ---
 
-## LiDAR SLAM
+## Repository layout
 
-The `roboracer_slam` package provides a LiDAR-based mapping pipeline for the RoboRacer simulation using ROS 2 and `slam_toolbox`.
-
-SLAM, or Simultaneous Localization and Mapping, performs two closely related tasks:
-
-- **Mapping:** The vehicle uses LiDAR measurements to construct an occupancy-grid representation of the environment.
-- **Localization:** The vehicle estimates its current pose relative to the generated map.
-
-The SLAM pipeline uses the simulated LiDAR scan, odometry information, and ROS 2 transform tree to incrementally construct the map as the vehicle moves through the environment.
-
-### Required ROS Package
-
-Install SLAM Toolbox if it is not already installed:
-
-```bash
-sudo apt update
-sudo apt install ros-humble-slam-toolbox
+```text
+rrstack/
+├── ros_ws/          ROS 2 workspace (build here)
+│   └── src/         ROS 2 packages
+├── tools/           Helper scripts (e.g. cone-track world generator)
+└── README.md        Installation and quick start (this file)
 ```
 
-The ROS 2 workspace must already be built before launching SLAM:
+| Package | Purpose | Documentation |
+|---|---|---|
+| `roboracer_gazebo` | Simulation: car model, worlds, ROS ↔ Ignition bridge | [README](ros_ws/src/roboracer_gazebo/README.md) |
+| `roboracer_drive_to_cmd_vel` | Simulation only: converts `/drive` (Ackermann) to `/cmd_vel` | — |
+| `roboracer_wallfollowing` | PID wall-following controller | [README](ros_ws/src/roboracer_wallfollowing/README.md) |
+| `roboracer_lidar_centerline` | LiDAR centerline extraction and Pure Pursuit | [README](ros_ws/src/roboracer_lidar_centerline/README.md) |
+| `roboracer_slam` | LiDAR SLAM with `slam_toolbox` | [README](ros_ws/src/roboracer_slam/README.md) |
+| `roboracer_perception` | YOLO cone detection, Delaunay waypoints (stub) | — |
+| `roboracer_rl` | Reinforcement-learning controller (optional) | [README](ros_ws/src/roboracer_rl/README.md) |
+
+
+---
+
+## Installation
+
+### 1. ROS 2 Humble
+
+Requires **Ubuntu 22.04**. Follow the official guide: <https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debians.html>
 
 ```bash
-cd ~/project_repo/roboracer_state_estimation/packages
+sudo apt update && sudo apt install -y software-properties-common curl
+sudo add-apt-repository universe
+sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
+    -o /usr/share/keyrings/ros-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] \
+http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" \
+    | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+sudo apt update
+sudo apt install -y ros-humble-desktop
+```
+
+### 2. Ignition Gazebo (Fortress) and stack dependencies
+
+```bash
+sudo apt install -y \
+    ros-humble-ros-gz \
+    ros-humble-robot-state-publisher \
+    ros-humble-xacro \
+    ros-humble-ackermann-msgs \
+    ros-humble-cv-bridge \
+    ros-humble-slam-toolbox \
+    ros-humble-nav2-map-server \
+    ros-humble-teleop-twist-keyboard \
+    python3-colcon-common-extensions \
+    python3-rosdep \
+    python3-pip
+```
+
+Check the simulator (expected: version 6.x, Fortress):
+
+```bash
+ign gazebo --version
+```
+
+### 3. Clone and build
+
+```bash
+git clone https://github.com/isselab/rrstack.git ~/rrstack
+cd ~/rrstack/ros_ws
 
 source /opt/ros/humble/setup.bash
+sudo rosdep init      # only once per machine; skip if already done
+rosdep update
+rosdep install --from-paths src --ignore-src -r -y
+pip install -r src/roboracer_perception/requirements.txt
+
 colcon build --symlink-install
 source install/setup.bash
 ```
 
-### Launch the SLAM Simulation
+Always run `colcon build` from `ros_ws/`, never from inside `src/`.
 
-The simulation uses **Ignition Gazebo (Fortress)** via `ros_gz_sim` and the
-`ros_gz_bridge`. Open the first terminal and run:
-
-```bash
-cd ~/project_repo/roboracer_state_estimation/packages
-
-source /opt/ros/humble/setup.bash
-source install/setup.bash
-
-LIBGL_ALWAYS_SOFTWARE=1 ros2 launch roboracer_slam sim_slam_rviz.launch.py
-```
-
-This launch file starts the RoboRacer Ignition Gazebo simulation, SLAM Toolbox, and RViz.
-
-`LIBGL_ALWAYS_SOFTWARE=1` enables software rendering and can be useful when running the simulation inside a virtual machine or on a system with limited graphics acceleration. The LiDAR, RGBD camera, and IMU are rendered with the `ogre2` engine; without a GPU the sensor update rates drop below their configured maximums, which is expected.
-
-Add `gui:=false` to run the simulator headless (no Ignition GUI window).
-
-### RViz Configuration
-
-In RViz, set:
-
-```text
-Fixed Frame: map
-```
-
-Add the following displays manually:
-
-| RViz display | ROS topic |
-|---|---|
-| Map | `/map` |
-| LaserScan | `/scan` |
-| Odometry | `/odom` |
-| TF | Transform tree |
-
-The main SLAM data flow is:
-
-```text
-Ignition Gazebo LiDAR (gpu_lidar)
-    |
-    v
-/scan          (bridged by ros_gz_bridge)
-    |
-    v
-slam_toolbox
-    |
-    +----> /map
-    |
-    +----> map -> odom transform
-
-Vehicle odometry (AckermannSteering plugin)
-    |
-    v
-/odom          (bridged by ros_gz_bridge)
-```
-
-The vehicle must move through the environment so that SLAM Toolbox receives LiDAR measurements from different positions and gradually constructs the occupancy-grid map.
-
-### Run the Trained RL Controller
-
-Open a second terminal while Gazebo and SLAM remain active:
+Optional, only for `roboracer_rl`:
 
 ```bash
-cd ~/project_repo/roboracer_state_estimation/packages
-
-source /opt/ros/humble/setup.bash
-source install/setup.bash
-source rr_rl/bin/activate
-
-python3 src/roboracer_rl/roboracer_rl/policy_node.py \
-    --model models/roboracer_dqn.zip \
-    --algorithm dqn
+pip install gymnasium stable-baselines3
 ```
 
-The trained reinforcement-learning controller publishes vehicle commands while the SLAM pipeline generates the map.
+---
 
-### Keyboard Teleoperation
+## Launch the simulation
 
-The vehicle can alternatively be driven manually using keyboard teleoperation.
-
-Open another terminal:
+Every new terminal:
 
 ```bash
-cd ~/project_repo/roboracer_state_estimation/packages
-
+cd ~/rrstack/ros_ws
 source /opt/ros/humble/setup.bash
 source install/setup.bash
+```
 
+### Start Ignition Gazebo and spawn the car
+
+```bash
+ros2 launch roboracer_gazebo gazebo.launch.py                  # walls track (default)
+ros2 launch roboracer_gazebo gazebo.launch.py world:=cones     # cone track
+```
+
+This starts Ignition Gazebo, loads the world, spawns the car at the origin, and starts the ROS ↔ Ignition bridge.
+
+| Argument | Default | Description |
+|---|---|---|
+| `world` | `walls` | `walls`, `cones`, or a full path to a `.world` file |
+| `gui` | `true` | `false` runs the simulator headless |
+| `x`, `y`, `z`, `yaw` | `0.0`, `0.0`, `0.1`, `0.0` | Spawn pose of the car |
+| `world_name` | `auto` | World name for the reset service; only needed for custom worlds |
+
+Examples:
+
+```bash
+ros2 launch roboracer_gazebo gazebo.launch.py gui:=false
+ros2 launch roboracer_gazebo gazebo.launch.py x:=1.0 y:=0.5 yaw:=1.57
+```
+
+### Check that the car is running
+
+```bash
+ros2 topic list                      # /scan /odom /imu /tf /clock /cmd_vel /camera/...
+ros2 topic hz /scan
+```
+
+### Drive the car manually
+
+```bash
 ros2 run teleop_twist_keyboard teleop_twist_keyboard
 ```
 
-The teleoperation node publishes movement commands to `/cmd_vel`.
+On a virtual machine or a system without a GPU, prefix launch commands with `LIBGL_ALWAYS_SOFTWARE=1`.
 
-Do not run the RL controller and keyboard teleoperation simultaneously unless command arbitration is configured, because both nodes may publish commands to the same topic.
-
-### Inspect the SLAM Pipeline
-
-List the active ROS 2 topics:
-
-```bash
-ros2 topic list
-```
-
-Inspect the SLAM Toolbox node:
-
-```bash
-ros2 node info /slam_toolbox
-```
-
-Inspect the main topics:
-
-```bash
-ros2 topic info /scan
-ros2 topic info /odom
-ros2 topic info /map
-```
-
-Check whether data is being published:
-
-```bash
-ros2 topic hz /scan
-ros2 topic hz /odom
-ros2 topic hz /map
-```
-
-Inspect the complete ROS 2 node and topic graph:
-
-```bash
-rqt_graph
-```
-
-The graph should show the LiDAR and odometry data flowing from the simulation into SLAM Toolbox, and the generated map being published to RViz.
-
-### Save the Generated Map
-
-After driving through the complete environment, save the occupancy-grid map:
-
-```bash
-mkdir -p ~/roboracer_maps
-cd ~/roboracer_maps
-
-ros2 run nav2_map_server map_saver_cli \
-    -f roboracer_track_map
-```
-
-The command generates:
-
-```text
-roboracer_track_map.pgm
-roboracer_track_map.yaml
-```
-
-The `.pgm` file contains the occupancy-grid image, and the `.yaml` file contains the map resolution, origin, occupancy thresholds, and image reference.
-
-The generated map files are the final SLAM output.
-
----
-
-## Wall Following
-
-The `roboracer_wallfollowing` package provides a PID wall-following controller for the RoboRacer simulation.
-
-The vehicle maintains a fixed lateral distance from one track wall using LiDAR and odometry. The controller is entirely classical: geometry and a PID loop, with no learned component.
-
-Three LiDAR beams are used, arranged as a V around the perpendicular direction. The forward and rear arms produce an estimate of the wall, from which the controller obtains:
-
-- **`Dt`** — the perpendicular distance from the vehicle to the wall
-- **`alpha`** — the heading error relative to the wall
-
-The perpendicular beam is excluded from that estimate and used instead as an independent validity check, so that a beam landing on the wrong surface at a corner can be detected and the estimate rejected.
-
-The method extends the two-beam approach described in the F1TENTH Lab 3 material. A full description of the geometry, the control law, and the complete parameter list is given in the package README:
-
-```text
-packages/src/roboracer_wallfollowing/README.md
-```
-
-### Build the Wall Following Package
-
-```bash
-cd ~/project_repo/roboracer_state_estimation/packages
-
-source /opt/ros/humble/setup.bash
-
-colcon build \
-    --symlink-install \
-    --packages-select roboracer_wallfollowing
-
-source install/setup.bash
-```
-
-### Launch Wall Following
-
-The launch file starts the Ignition Gazebo simulation, spawns the vehicle, and runs the controller.
-
-```bash
-cd ~/project_repo/roboracer_state_estimation/packages
-
-source /opt/ros/humble/setup.bash
-source install/setup.bash
-
-LIBGL_ALWAYS_SOFTWARE=1 ros2 launch roboracer_wallfollowing wall_follow.launch.py
-```
-
-The wall to follow is selected at launch:
-
-```bash
-ros2 launch roboracer_wallfollowing wall_follow.launch.py side:=left
-```
-
-A different world can be supplied in the same way as for the other packages:
-
-```bash
-ros2 launch roboracer_wallfollowing wall_follow.launch.py \
-    world:=$(ros2 pkg prefix roboracer_gazebo)/share/roboracer_gazebo/worlds/flw_cone_track_from_walls.world
-```
-
-Available launch arguments are `side`, `world`, `world_name`, `x`, `y`, `z`, `yaw`, and `gui`.
-
-### Topics
-
-| Direction | ROS topic | Type |
-|---|---|---|
-| Subscribed | `/scan` | `sensor_msgs/LaserScan` |
-| Subscribed | `/odom` | `nav_msgs/Odometry` |
-| Published | `/cmd_vel` | `geometry_msgs/Twist` |
-| Published | `/wall_follow/markers` | `visualization_msgs/MarkerArray` |
-
-The controller publishes commands to `/cmd_vel`. Do not run it at the same time as keyboard teleoperation or the RL controller unless command arbitration is configured, because all three publish to the same topic.
-
-### Visualise the Controller
-
-In RViz, set:
-
-```text
-Fixed Frame: laser
-```
-
-Add the following display:
-
-| RViz display | ROS topic |
-|---|---|
-| MarkerArray | `/wall_follow/markers` |
-
-The markers show the three beams, the fitted wall line, the measured distance `Dt`, and a text readout of the current distance, heading error, control error, and steering command.
-
-### Inspect the Controller
-
-```bash
-ros2 topic hz /scan
-ros2 topic hz /odom
-ros2 topic echo /cmd_vel
-```
-
-```bash
-ros2 param list /wall_follow_pid_node
-ros2 param get /wall_follow_pid_node side
-ros2 param get /wall_follow_pid_node desired_distance
-```
-
----
-
-## Cone Track World
-
-The Gazebo package includes the world:
-
-```text
-packages/src/roboracer_gazebo/worlds/flw_cone_track_from_walls.world
-```
-
-This environment contains blue and yellow cones positioned along the track boundaries. It can be used for cone detection, LiDAR perception, boundary extraction, path planning, and autonomous-driving experiments.
-
-### Ignition Gazebo migration notes
-
-The simulation was ported from Gazebo Classic to **Ignition Gazebo (Fortress)**:
-
-| Area | Gazebo Classic (old) | Ignition Gazebo (current) |
-|---|---|---|
-| Simulator launch | `gazebo_ros` `gzserver`/`gzclient` | `ros_gz_sim` `gz_sim.launch.py` |
-| Spawn | `spawn_entity.py` (URDF) | `ros_gz_sim create` (`model.sdf`) |
-| Model path env | `GAZEBO_MODEL_PATH` | `IGN_GAZEBO_RESOURCE_PATH` |
-| Car model | `f110_car.urdf` + `<gazebo>` plugins | `f110_car/model.sdf` (SDF 1.9) |
-| Drive plugin | `libgazebo_ros_ackermann_drive.so` | `ignition-gazebo-ackermann-steering-system` |
-| LiDAR | `libgazebo_ros_ray_sensor.so` | `gpu_lidar` sensor + `Sensors` system |
-| Camera | `libgazebo_ros_camera.so` | `rgbd_camera` sensor + `Sensors` system |
-| IMU | `libgazebo_ros_imu_sensor.so` | `imu` sensor + `Imu` system |
-| Joint states | `libgazebo_ros_joint_state_publisher.so` | `ignition-gazebo-joint-state-publisher-system` |
-| ROS bridge | direct `gazebo_ros` plugins | `ros_gz_bridge` `parameter_bridge` |
-| RL world reset | `/reset_world` (`std_srvs/Empty`) | `/world/<world>/control` + `ign service .../set_pose` |
-
-The car is spawned from `models/f110_car/model.sdf`. The `f110_car.urdf` is
-kept only so that `robot_state_publisher` can publish the TF tree of the static
-frames; all physics, drive, and sensor behaviour lives in the SDF model.
-
-Topics exposed to ROS (unchanged names, so downstream nodes do not change):
-`/cmd_vel`, `/odom`, `/scan`, `/imu`, `/joint_states`, `/clock`, `/tf`,
-`/camera/color/image_raw`, `/camera/depth/image_raw`, `/camera/color/camera_info`,
-`/camera/depth/color/points`.
-
-### Build the Gazebo Package
-
-After adding or modifying the world or cone models, rebuild the workspace:
-
-```bash
-cd ~/project_repo/roboracer_state_estimation/packages
-
-source /opt/ros/humble/setup.bash
-
-colcon build \
-    --symlink-install \
-    --packages-select roboracer_gazebo roboracer_slam
-
-source install/setup.bash
-```
-
-### Launch the Cone Track in Ignition Gazebo
-
-```bash
-cd ~/project_repo/roboracer_state_estimation/packages
-
-source /opt/ros/humble/setup.bash
-source install/setup.bash
-
-ros2 launch roboracer_gazebo gazebo.launch.py \
-    world:=$(ros2 pkg prefix roboracer_gazebo)/share/roboracer_gazebo/worlds/flw_cone_track_from_walls.world \
-    world_name:=flw_cone_track_from_walls_lane_origin
-```
-
-`world_name` must match the `<world name="...">` attribute inside the world
-file; it is only needed to build the reset-service topic. For the two built-in
-worlds it is inferred automatically from `world:=walls` / `world:=cones`.
-
-### Launch SLAM with the Cone Track
-
-```bash
-cd ~/project_repo/roboracer_state_estimation/packages
-
-source /opt/ros/humble/setup.bash
-source install/setup.bash
-
-LIBGL_ALWAYS_SOFTWARE=1 ros2 launch roboracer_slam sim_slam_rviz.launch.py \
-    world:=$(ros2 pkg prefix roboracer_gazebo)/share/roboracer_gazebo/worlds/flw_cone_track_from_walls.world
-```
-
-The cone models referenced by the world must be available to Ignition Gazebo
-via `IGN_GAZEBO_RESOURCE_PATH` (the launch file sets it to the package's
-`models/` directory automatically). The expected model names are:
-
-```text
-model://blue_cone
-model://yellow_cone
-```
-
-A typical model structure is:
-
-```text
-roboracer_gazebo/
-└── models/
-    ├── blue_cone/
-    │   ├── model.config
-    │   └── model.sdf
-    └── yellow_cone/
-        ├── model.config
-        └── model.sdf
-```
-
-When the cone geometry is defined directly using SDF primitives, separate mesh files are not required. When the SDF contains a `<mesh>` URI, the corresponding mesh file must also be present in the model directory.
-
-### Verify the Cone Models
-
-```bash
-find packages/src/roboracer_gazebo/models/blue_cone \
-    -maxdepth 2 \
-    -type f \
-    -print
-
-find packages/src/roboracer_gazebo/models/yellow_cone \
-    -maxdepth 2 \
-    -type f \
-    -print
-```
-
-### Verify the Cone World
-
-```bash
-grep -n "blue_cone\|yellow_cone" \
-    packages/src/roboracer_gazebo/worlds/flw_cone_track_from_walls.world
-```
-
-If the cones do not appear in Ignition Gazebo, verify that the model names inside `model.config`, `model.sdf`, and the world file are consistent.
-
+Controllers, SLAM, and perception are described in the package READMEs linked above.

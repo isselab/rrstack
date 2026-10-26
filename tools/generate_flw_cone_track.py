@@ -11,7 +11,7 @@ Corrections included:
 import math
 from pathlib import Path
 
-OUT_WORLD = Path("packages/src/roboracer_gazebo/worlds/flw_cone_track_from_walls.world")
+OUT_WORLD = Path("ros_ws/src/roboracer_gazebo/worlds/flw_cone_track_from_walls.world")
 CONE_SPACING = 0.80  # meters. Smaller = more cones, larger = fewer cones.
 CENTER_LANE_ORIGIN = True
 

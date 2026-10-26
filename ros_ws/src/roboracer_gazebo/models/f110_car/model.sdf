@@ -42,7 +42,12 @@ SDF FRAME CONVENTION (important):
   <model name="f110_car">
 
     <!-- ================= base_link (chassis offset frame) ================= -->
-    <link name="base_link"/>
+    <link name="base_link">
+      <inertial>
+        <mass>0.001</mass>
+        <inertia><ixx>1e-6</ixx><ixy>0</ixy><ixz>0</ixz><iyy>1e-6</iyy><iyz>0</iyz><izz>1e-6</izz></inertia>
+      </inertial>
+    </link>
 
     <link name="chassis">
       <pose relative_to="base_link">0.16 0 0.05 0 0 0</pose>
@@ -298,6 +303,10 @@ SDF FRAME CONVENTION (important):
     <!-- Optical frame: z forward, x right, y down (camera image convention) -->
     <link name="camera_color_optical_frame">
       <pose relative_to="camera">0 0 0 -1.5708 0 -1.5708</pose>
+       <inertial>
+        <mass>0.001</mass>
+        <inertia><ixx>1e-6</ixx><ixy>0</ixy><ixz>0</ixz><iyy>1e-6</iyy><iyz>0</iyz><izz>1e-6</izz></inertia>
+      </inertial>
     </link>
     <joint name="camera_optical_joint" type="fixed">
       <parent>camera</parent>
@@ -399,6 +408,7 @@ SDF FRAME CONVENTION (important):
       <right_joint>right_wheel_back_hinge</right_joint>
 
       <steering_limit>0.6458</steering_limit>
+      <steer_p_gain>10.0</steer_p_gain>
       <wheel_base>0.32</wheel_base>
       <kingpin_width>0.211</kingpin_width>
       <wheel_separation>0.211</wheel_separation>
