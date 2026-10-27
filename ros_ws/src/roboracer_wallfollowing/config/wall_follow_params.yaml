@@ -4,14 +4,18 @@ wall_follow_pid_node:
     theta_front_deg: 35.0
     theta_rear_deg: 35.0
     desired_distance: 0.6
-    base_lookahead: 0.5
-    lookahead_speed_gain: 0.3
-    kp: 1.0
+    base_lookahead: 0.8          # lookahead = base + gain * speed (from base_link)
+    lookahead_speed_gain: 0.6
+    lookahead_max_range: 4.0     # ignore beam-4 hits further than this
+    kp: 0.6                      # PID on the angle to the lookahead target [rad -> rad]
     ki: 0.0
-    kd: 0.1
+    kd: 0.05
     max_steering_angle: 0.4
+    steer_lag_tau: 1.1           # Ignition steering lag [s]. Set 0.0 on the real car
+    lag_boost: 3.0
     nominal_speed: 1.5
     min_speed: 0.5
+    recovery_speed: 0.5
     max_lidar_range: 10.0
     control_period: 0.02
     scan_topic: /scan
