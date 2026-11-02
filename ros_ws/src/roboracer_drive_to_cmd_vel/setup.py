@@ -25,6 +25,7 @@ setup(
     entry_points={
         'console_scripts': [
             'drive_to_cmd_vel = roboracer_drive_to_cmd_vel.drive_to_cmd_vel:main',
+            'steering_lag_compensator = roboracer_drive_to_cmd_vel.steering_lag_compensator:main',
         ],
     },
 )
