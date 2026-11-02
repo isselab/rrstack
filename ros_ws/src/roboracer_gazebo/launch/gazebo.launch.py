@@ -11,11 +11,12 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import (DeclareLaunchArgument, IncludeLaunchDescription,
-                            SetEnvironmentVariable)
+from launch.actions import (DeclareLaunchArgument, ExecuteProcess,
+                            IncludeLaunchDescription, LogInfo,
+                            RegisterEventHandler, SetEnvironmentVariable)
+from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import (LaunchConfiguration, PathJoinSubstitution,
-                                  PythonExpression)
+from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 
 
@@ -173,11 +174,28 @@ def generate_launch_description():
         ],
     )
 
+    # ===== Spawn only once the world is running =====
+    # Spawning at the same instant as Gazebo times out when the world loads
+    # slowly (no car -> no camera -> yolo_node: "no frames received yet").
+    # Instead wait for the first /clock message: it only flows once the world
+    # is loaded and simulating. The message type is given explicitly so that
+    # `echo` waits for the topic instead of failing while it does not exist.
+    wait_for_world = ExecuteProcess(
+        cmd=['ros2', 'topic', 'echo', '--once', '/clock', 'rosgraph_msgs/msg/Clock'],
+        name='wait_for_world', output='log',
+    )
+    spawn_when_ready = RegisterEventHandler(OnProcessExit(
+        target_action=wait_for_world,
+        on_exit=[LogInfo(msg='world is running: spawning the car'), spawn_car],
+    ))
+
     return LaunchDescription([
         set_resource_path,
         world_arg, gui_arg, world_name_arg, x_arg, y_arg, z_arg, yaw_arg,
         gazebo,
         robot_state_publisher,
-        spawn_car,
         bridge,
+        LogInfo(msg='waiting for the world (/clock) before spawning the car...'),
+        wait_for_world,
+        spawn_when_ready,
     ])

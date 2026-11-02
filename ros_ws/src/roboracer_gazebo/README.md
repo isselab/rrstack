@@ -19,6 +19,8 @@ ros2 launch roboracer_gazebo gazebo.launch.py gui:=false       # headless
 | `x`, `y`, `z`, `yaw` | `0.0`, `0.0`, `0.1`, `0.0` | Spawn pose of the car |
 | `world_name` | `auto` | Must match `<world name="...">` in the world file. Inferred automatically for `walls` and `cones`; only needed for custom worlds (used for the reset service) |
 
+The car is spawned only after the first `/clock` message (world loaded and running). Spawning at the same instant as Gazebo timed out on slow starts, leaving a world without a car and camera.
+
 ---
 
 ## Worlds
@@ -40,6 +42,8 @@ The cone world is generated from the track walls by `tools/generate_flw_cone_tra
 | `models/f110_car/f110_car.urdf` | `robot_state_publisher` | TF tree of the static frames |
 
 Both files describe the same car and must be kept consistent.
+
+The RGB-D camera (640×480) has explicit `<lens><intrinsics>` (fx = fy = 462.12, cx = 320, cy = 240). Without them Ignition Fortress publishes a default camera_info (fx = 277, cx = 160, cy = 120) that does not match the image and shifts every detected cone sideways.
 
 ---
 

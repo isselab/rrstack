@@ -292,6 +292,19 @@ SDF FRAME CONVENTION (important):
             <near>0.105</near>
             <far>10.0</far>
           </clip>
+          <!-- Explicit intrinsics: without these, Ignition Fortress publishes
+               default camera_info (fx=277, cx=160, cy=120) that does not match
+               the 640x480 image, which shifts every cone sideways in yolo_node.
+               fx = fy = 320 / tan(horizontal_fov / 2), cx/cy = image centre. -->
+          <lens>
+            <intrinsics>
+              <fx>462.12</fx>
+              <fy>462.12</fy>
+              <cx>320</cx>
+              <cy>240</cy>
+              <s>0</s>
+            </intrinsics>
+          </lens>
         </camera>
       </sensor>
     </link>
@@ -408,6 +421,10 @@ SDF FRAME CONVENTION (important):
       <right_joint>right_wheel_back_hinge</right_joint>
 
       <steering_limit>0.6458</steering_limit>
+      <!-- NOTE: Ignition Fortress (gazebo6) ignores steer_p_gain (10 vs 100 gives
+           the same response). The hinges follow the command with a ~1.05 s
+           first-order lag; roboracer_drive_to_cmd_vel/steering_lag_compensator
+           compensates it in simulation. -->
       <steer_p_gain>10.0</steer_p_gain>
       <wheel_base>0.32</wheel_base>
       <kingpin_width>0.211</kingpin_width>
