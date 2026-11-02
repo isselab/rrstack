@@ -9,7 +9,8 @@ Cone perception for the RoboRacer: YOLO detects blue/yellow cones in the RGB ima
 | Node | Status | Purpose |
 |---|---|---|
 | `yolo_node` | Working | Cone detection + 3D position from RGB-D |
-| `delaunay_node` | Stub | Will build track waypoints from cone positions (Delaunay triangulation); currently only subscribes |
+
+Waypoints from the cones are built in [`roboracer_planning`](../roboracer_planning/README.md).
 
 ---
 

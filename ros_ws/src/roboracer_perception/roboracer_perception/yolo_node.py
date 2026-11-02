@@ -7,7 +7,6 @@
 
 from pathlib import Path
 
-import cv2
 import numpy as np
 import rclpy
 import message_filters
@@ -20,13 +19,6 @@ from sensor_msgs.msg import CameraInfo
 from ultralytics import YOLO
 from geometry_msgs.msg import PoseArray, Pose
 
-
-BOX_COLORS = [
-    (255, 160, 40),
-    (40, 220, 255),
-    (80, 220, 120),
-    (200, 120, 255),
-]
 
 
 def find_default_model():
@@ -66,7 +58,6 @@ class YoloConeDebugNode(Node):
         self.declare_parameter('yellow_conf', 0.5)
         self.declare_parameter('report_period', 5.0)
         self.declare_parameter('iou_threshold', 0.4)
-        self.declare_parameter('position_confidence_threshold', 0.4)
         self.declare_parameter('max_depth', 10.0)
 
         image_topic = self.get_parameter('image_topic').value
@@ -75,7 +66,6 @@ class YoloConeDebugNode(Node):
         report_period = self.get_parameter('report_period').value
         self._iou = self.get_parameter('iou_threshold').value
         camera_info_topic = self.get_parameter('camera_info_topic').value
-        self._pos_conf = self.get_parameter('position_confidence_threshold').value
         self._conf = self.get_parameter('confidence_threshold').value
         self._class_conf = {
             'blue_cones': self.get_parameter('blue_conf').value,
@@ -142,7 +132,15 @@ class YoloConeDebugNode(Node):
     def _synced_cb(self, msg, depth_msg):
         try:
             frame = self._bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
-            depth = self._bridge.imgmsg_to_cv2(depth_msg, desired_encoding='32FC1')
+            if depth_msg.encoding == '16UC1':
+                # Real RealSense: depth in whole millimetres -> metres.
+                # (A plain 32FC1 conversion keeps the number, so 2 m would
+                # read 2000 and every cone would fail the max_depth check.)
+                depth = self._bridge.imgmsg_to_cv2(
+                    depth_msg, desired_encoding='passthrough').astype(np.float32) * 0.001
+            else:
+                # Gazebo: 32FC1, already in metres.
+                depth = self._bridge.imgmsg_to_cv2(depth_msg, desired_encoding='32FC1')
         except Exception as exc:
             self.get_logger().warn(f'cv_bridge failed: {exc}')
             return
@@ -170,7 +168,6 @@ class YoloConeDebugNode(Node):
                     continue
 
                 x = (u - self._cx) * z / self._fx
-                y = (v - self._cy) * z / self._fy
 
                 if conf >= self._class_conf.get(label, 1.0):
                     self._cone_points.append((z, x, label))

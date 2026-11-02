@@ -20,11 +20,12 @@ rrstack/
 | Package | Purpose | Documentation |
 |---|---|---|
 | `roboracer_gazebo` | Simulation: car model, worlds, ROS ↔ Ignition bridge | [README](ros_ws/src/roboracer_gazebo/README.md) |
-| `roboracer_drive_to_cmd_vel` | Simulation only: converts `/drive` (Ackermann) to `/cmd_vel` | — |
+| `roboracer_drive_to_cmd_vel` | Simulation only: steering-lag compensator + `/drive` (Ackermann) → `/cmd_vel` | [README](ros_ws/src/roboracer_drive_to_cmd_vel/README.md) |
 | `roboracer_wallfollowing` | PID wall-following controller | [README](ros_ws/src/roboracer_wallfollowing/README.md) |
 | `roboracer_lidar_centerline` | LiDAR centerline extraction and Pure Pursuit | [README](ros_ws/src/roboracer_lidar_centerline/README.md) |
 | `roboracer_slam` | LiDAR SLAM with `slam_toolbox` | [README](ros_ws/src/roboracer_slam/README.md) |
-| `roboracer_perception` | YOLO cone detection, Delaunay waypoints (stub) | — |
+| `roboracer_perception` | YOLO cone detection | [README](ros_ws/src/roboracer_perception/README.md) |
+| `roboracer_planning` | Cone-based Delaunay waypoints + centreline PID / waypoint pure pursuit | [README](ros_ws/src/roboracer_planning/README.md) |
 | `roboracer_rl` | Reinforcement-learning controller (optional) | [README](ros_ws/src/roboracer_rl/README.md) |
 
 
@@ -144,5 +145,36 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard
 ```
 
 On a virtual machine or a system without a GPU, prefix launch commands with `LIBGL_ALWAYS_SOFTWARE=1`.
+
+---
+
+## Drive the car autonomously
+
+Each launch starts Gazebo, the car, the controller and the simulation-only
+[steering-lag compensator](ros_ws/src/roboracer_drive_to_cmd_vel/README.md). The car starts driving by itself.
+
+### Through cones (camera): YOLO → Delaunay → pure pursuit
+
+```bash
+ros2 launch roboracer_planning cone_drive.launch.py                    # pure pursuit (recommended)
+ros2 launch roboracer_planning cone_drive.launch.py controller:=pid    # centreline PID
+```
+
+```text
+camera ─► yolo_node ─► delaunay_node ─► waypoint_pursuit_node ─► /drive ─► steering_lag_compensator ─► drive_to_cmd_vel ─► Gazebo
+```
+
+Gazebo result: 1.25 laps without cone contact, 1.03 m/s average (up to 1.5 m/s).
+Arguments, topics, parameters and the steering-lag compensation: [roboracer_planning README](ros_ws/src/roboracer_planning/README.md).
+On the real car: `ros2 launch roboracer_planning cone_drive_car.launch.py` (no Gazebo, RealSense topics), see [Running on the real car](ros_ws/src/roboracer_planning/README.md#running-on-the-real-car).
+
+### Along walls (LiDAR): PID wall follower
+
+```bash
+ros2 launch roboracer_wallfollowing wall_follow.launch.py              # left wall
+ros2 launch roboracer_wallfollowing wall_follow.launch.py side:=right  # right wall
+```
+
+Gazebo result: 2.2 laps, 1.34 m/s average. Details: [roboracer_wallfollowing README](ros_ws/src/roboracer_wallfollowing/README.md).
 
 Controllers, SLAM, and perception are described in the package READMEs linked above.

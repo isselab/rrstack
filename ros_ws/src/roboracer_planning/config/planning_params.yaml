@@ -1,0 +1,57 @@
+# Parameters for the cone planning pipeline. Every node also has these as
+# code defaults; edit here, rebuild, relaunch.
+
+delaunay_node:
+  ros__parameters:
+    camera_forward_offset: 0.37  # camera ahead of base_link [m]
+    max_range: 6.5               # R10: ignore cones further than this [m]
+    min_edge: 0.8                # R4: blue-yellow edge length gate [m]
+    max_edge: 2.2                #     (cones world: track ~1.25-1.46 m wide)
+    half_track_width: 0.7        # R1/R8: offset for unpaired cones [m]
+    merge_radius: 0.5            # fallback point dropped if this close to a midpoint
+    cone_link: 1.5               # max spacing when chaining one boundary [m]
+    waypoint_link: 1.6           # R7: max spacing when chaining waypoints [m]
+    max_gap: 3.0                 # R8: longest straight-ahead jump over a gap [m]
+
+centerline_pid_node:
+  ros__parameters:
+    base_lookahead: 1.5          # lookahead = base + gain * speed [m]
+    lookahead_speed_gain: 0.3
+    kp: 0.8                      # PID on the angle to the lookahead point
+    ki: 0.0
+    kd: 0.05
+    max_steering_angle: 0.4
+    nominal_speed: 1.0
+    min_speed: 0.4
+    min_path_length: 2.5         # R5: path shorter than this -> min_speed [m]
+    hold_speed: 0.4              # R2
+    fresh_timeout: 0.5           # waypoints older than this -> HOLD [s]
+    hold_timeout: 1.0            # older than this -> EXPLORE [s]
+    explore_speed: 0.3           # R8 explore mode
+    explore_step: 1.0            # drive this far, pause, look [m]
+    explore_pause: 0.6           # [s]
+    explore_max_distance: 3.0    # then STOP [m]
+    weave_amplitude: 0.2         # [rad]
+    weave_period: 2.0            # [s]
+    weave_bias: 0.1              # lean toward the side the track bent to [rad]
+
+waypoint_pursuit_node:
+  ros__parameters:
+    lookahead_distance: 1.8          # > ~1.5 m camera blind zone, else no effect
+    wheelbase: 0.32
+    target_speed: 1.5                # 2.0 tested: 1 lap OK, contact on lap 2
+    minimum_speed: 0.5
+    maximum_speed: 1.5
+    maximum_steering_angle: 0.55
+    curvature_speed_gain: 3.0        # slows to ~0.6 m/s in tight corners
+    control_frequency: 30.0
+    hold_speed: 0.3
+    fresh_timeout: 0.5
+    hold_timeout: 1.0
+    explore_speed: 0.3
+    explore_step: 1.0
+    explore_pause: 0.6
+    explore_max_distance: 3.0
+    weave_amplitude: 0.2
+    weave_period: 2.0
+    weave_bias: 0.1

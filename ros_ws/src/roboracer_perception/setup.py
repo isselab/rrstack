@@ -33,7 +33,6 @@ setup(
     entry_points={
         'console_scripts': [
             'yolo_node = roboracer_perception.yolo_node:main',
-            'delaunay_node = roboracer_perception.delaunay_node:main',
         ],
     },
 )
