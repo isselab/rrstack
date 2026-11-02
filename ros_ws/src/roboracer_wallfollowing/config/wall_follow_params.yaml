@@ -11,8 +11,6 @@ wall_follow_pid_node:
     ki: 0.0
     kd: 0.05
     max_steering_angle: 0.4
-    steer_lag_tau: 1.1           # Ignition steering lag [s]. Set 0.0 on the real car
-    lag_boost: 3.0
     nominal_speed: 1.5
     min_speed: 0.5
     recovery_speed: 0.5

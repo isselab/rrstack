@@ -35,9 +35,9 @@ steering = Kp·error + Ki·∫error + Kd·d(error)/dt
 
 ### 4. Steering-lag compensation (simulation)
 
-- **Problem:** Ignition Fortress steers with a ~1 s lag. Without compensation, the car weaves.
-- **Fix:** the node estimates the actual wheel angle and over-commands until the wheels catch up (`steer_lag_tau`, `lag_boost`).
-- **Real car:** set `steer_lag_tau: 0.0`.
+- **Problem:** Ignition Fortress steers with a ~1.05 s lag (measured). Without compensation, the car weaves.
+- **Fix:** handled outside this node by the sim-only [`steering_lag_compensator`](../roboracer_drive_to_cmd_vel/README.md) (`/drive` → `/drive_sim`), closed loop on the measured wheel angle. It switches itself on when `use_sim_time` is true, so the launch line has no extra argument.
+- **Real car:** nothing to change; this node contains no simulator code.
 
 ### 5. Recovery
 
@@ -56,7 +56,7 @@ ros2 launch roboracer_wallfollowing wall_follow.launch.py              # left wa
 ros2 launch roboracer_wallfollowing wall_follow.launch.py side:=right  # right wall
 ```
 
-Starts Ignition Gazebo, spawns the car, the controller, and the `/drive` → `/cmd_vel` bridge.
+Starts Ignition Gazebo, spawns the car, the controller, the steering-lag compensator and the `/drive_sim` → `/cmd_vel` bridge.
 
 | Argument | Default | Description |
 |---|---|---|
@@ -108,8 +108,6 @@ Modes: `pid` (normal), `pid_line` (beam 4 sees nothing, uses the V line), `corne
 | `base_lookahead`, `lookahead_speed_gain` | `0.8`, `0.6` | Lookahead = base + gain · speed [m] |
 | `kp`, `ki`, `kd` | `0.6`, `0.0`, `0.05` | PID gains (error in rad) |
 | `max_steering_angle` | `0.4` | Steering limit [rad] |
-| `steer_lag_tau` | `1.1` | Steering lag of the simulator [s]; `0.0` on the real car |
-| `lag_boost` | `3.0` | Over-command factor while the wheels catch up |
 | `nominal_speed`, `min_speed` | `1.5`, `0.5` | Speed on straights / at full steering [m/s] |
 | `recovery_speed` | `0.5` | Speed while the wall is lost [m/s] |
 | `residual_threshold` | `0.35` | Max disagreement of beam `b` with the fitted line [m] |
@@ -120,6 +118,6 @@ YAML values must keep their decimal point (`2.0`, not `2`).
 
 ## Tuning
 
-- **Weaving in simulation:** raise `lag_boost` (e.g. `4.0`), or lower `nominal_speed`.
+- **Weaving in simulation:** raise the compensator's `boost` (e.g. `-p boost:=4.0`), or lower `nominal_speed`.
 - **Too close to the wall in curves:** lower `nominal_speed`.
-- **Real car:** `steer_lag_tau: 0.0`, then tune `kp`, `kd` at low speed.
+- **Real car:** tune `kp`, `kd` at low speed (no lag setting needed).

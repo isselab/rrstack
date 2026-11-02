@@ -50,14 +50,25 @@ def generate_launch_description():
         ],
     )
 
-    # ===== /drive -> /cmd_vel bridge (simulation only) =====
-    # The PID publishes /drive (real-car interface); Gazebo only reads /cmd_vel.
+    # ===== Steering-lag compensation + /drive -> /cmd_vel (simulation) =====
+    # The PID publishes /drive (real-car interface, no lag code inside).
+    # The compensator switches itself on when it runs on the simulation clock
+    # (use_sim_time: true, as here) and removes Ignition's ~1.05 s steering lag
+    # (/drive -> /drive_sim); on the real car it would only pass through.
+    # Nothing to type on the launch line.
+    steering_lag_compensator = Node(
+        package="roboracer_drive_to_cmd_vel",
+        executable="steering_lag_compensator",
+        name="steering_lag_compensator",
+        output="screen",
+        parameters=[{"use_sim_time": True}],   # enabled: auto -> active in sim
+    )
     drive_to_cmd_vel = Node(
         package="roboracer_drive_to_cmd_vel",
         executable="drive_to_cmd_vel",
         name="drive_to_cmd_vel",
         output="screen",
-        parameters=[{"use_sim_time": True}],
+        parameters=[{"use_sim_time": True, "drive_topic": "/drive_sim"}],
     )
 
     return LaunchDescription([
@@ -78,5 +89,6 @@ def generate_launch_description():
 
         gazebo,
 
-        TimerAction(period=7.0, actions=[wall_follow_node, drive_to_cmd_vel]),
+        TimerAction(period=7.0, actions=[wall_follow_node, steering_lag_compensator,
+                                         drive_to_cmd_vel]),
     ])

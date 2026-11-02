@@ -7,7 +7,8 @@
 #   - Beam 4 is aimed at the wall point one lookahead ahead of the car, so
 #     curves are seen before the car reaches them.
 #   - PID on the angle to the lookahead target (a point desired_distance off
-#     the wall), plus optional steering-lag compensation for Ignition.
+#     the wall). Steering-lag compensation for Ignition lives in the
+#     sim-only roboracer_drive_to_cmd_vel/steering_lag_compensator node.
 # RViz markers are published for debugging.
 
 import math
@@ -42,9 +43,6 @@ class WallFollowPIDNode(Node):
         self.declare_parameter('max_steering_angle', 0.4)
         self.declare_parameter('max_steering_rate', 4.0)
         self.declare_parameter('max_d_term', 0.3)
-        self.declare_parameter('steer_lag_tau', 0.0)
-        self.declare_parameter('lag_boost', 3.0)
-        self.declare_parameter('steering_limit', 0.6458)
         self.declare_parameter('nominal_speed', 1.5)
         self.declare_parameter('min_speed', 0.5)
         self.declare_parameter('recovery_speed', 0.5)
@@ -78,9 +76,6 @@ class WallFollowPIDNode(Node):
         self._max_steering = p('max_steering_angle').value
         self._max_steering_rate = p('max_steering_rate').value
         self._max_d_term = p('max_d_term').value
-        self._lag_tau = p('steer_lag_tau').value
-        self._lag_boost = p('lag_boost').value
-        self._steering_limit = p('steering_limit').value
         self._nominal_speed = p('nominal_speed').value
         self._min_speed = p('min_speed').value
         self._recovery_speed = p('recovery_speed').value
@@ -98,7 +93,6 @@ class WallFollowPIDNode(Node):
         self._prev_error = None
         self._prev_time = None
         self._prev_steering = 0.0
-        self._delta_est = 0.0   # estimated real wheel angle (lag observer)
         self._current_speed = 0.0
         self._latest_scan = None
         self._scan_time = None
@@ -120,8 +114,7 @@ class WallFollowPIDNode(Node):
         self.get_logger().info(
             f'wall_follow_pid_node: side={self._side}, '
             f'desired={self._desired_distance} m, '
-            f'arms={math.degrees(self._theta_f):.0f}/{rear_deg:.0f} deg, '
-            f'steer_lag_tau={self._lag_tau} s'
+            f'arms={math.degrees(self._theta_f):.0f}/{rear_deg:.0f} deg'
         )
 
     def _odom_cb(self, msg):
@@ -325,18 +318,6 @@ class WallFollowPIDNode(Node):
         self._prev_steering = steering
         return steering
 
-    def _lag_compensate(self, steering, dt):
-        """Ignition steering joints follow d(delta)/dt = (cmd - delta) / tau.
-
-        Command past the goal while the wheels are still far from it.
-        """
-        if self._lag_tau <= 0.0:
-            return steering
-        cmd = self._delta_est + self._lag_boost * (steering - self._delta_est)
-        cmd = max(-self._steering_limit, min(self._steering_limit, cmd))
-        self._delta_est += (cmd - self._delta_est) * min(dt / self._lag_tau, 1.0)
-        return cmd
-
     def _publish(self, speed, steering):
         msg = AckermannDriveStamped()
         msg.header.stamp = self.get_clock().now().to_msg()
@@ -393,8 +374,7 @@ class WallFollowPIDNode(Node):
         if mode == 'gap':
             speed = min(speed, self._recovery_speed)
 
-        command = self._lag_compensate(steering, dt)
-        self._publish(speed, command)
+        self._publish(speed, steering)
         self._publish_debug_markers(scan, geo, hit_4, (tx, ty), error, steering, mode)
 
     def _marker(self, scan, ns, mid, mtype, scale, color):
